@@ -36,6 +36,10 @@ class Environment:
     def state(self):
         return self.env.state()
 
+    # Wrapper for env.state
+    def seed(self):
+        return self.env.seed
+
     # Wrapper for env.reset
     def reset(self, seed=None):
         return self.env.reset(seed)
@@ -43,6 +47,10 @@ class Environment:
     # Wrapper for env.state_shape
     def state_shape(self):
         return self.env.state_shape()
+
+    # Wrapper for env.state_shape
+    def reward_range(self):
+        return self.env.reward_range()
 
     # All MinAtar environments have 6 actions
     def num_actions(self):
@@ -109,15 +117,22 @@ class BatchEnvironment:
     def state(self):
         return np.stack([e.state() for e in self.envs])
 
+    # Wrapper for env.state
+    def seed(self):
+        return np.stack([e.seed() for e in self.envs])
+
     # Wrapper for env.reset
     def reset(self, seeds=None):
         if seeds == None: seeds = [None] * self.n
-        outs = [e.reset(seed) for e, seed in zip(self.envs, seeds)]
-        return np.stack(outs)
+        [e.reset(seed) for e, seed in zip(self.envs, seeds)]
 
     # Wrapper for env.state_shape
     def state_shape(self):
         return self.envs[0].state_shape()
+
+    # Wrapper for env.state_shape
+    def reward_range(self):
+        return self.envs[0].reward_range()
 
     # All MinAtar environments have 6 actions
     def num_actions(self):
