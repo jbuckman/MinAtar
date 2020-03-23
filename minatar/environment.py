@@ -103,7 +103,11 @@ class BatchEnvironment:
     # Wrapper for env.act
     def act(self, actions):
         outs = [e.act(a) for e, a in zip(self.envs, actions)]
-        return tuple(np.stack(v) for v in zip(*outs))
+        return tuple(np.stack(x) for x in zip(*outs))
+
+    # Wrapper for env.state
+    def state(self):
+        return np.stack([e.state() for e in self.envs])
 
     # Wrapper for env.reset
     def reset(self, seeds=None):
