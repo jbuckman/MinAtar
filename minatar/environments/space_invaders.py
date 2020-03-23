@@ -4,7 +4,7 @@
 # Tian Tian (ttian@ualberta.ca)                                                                                #
 ################################################################################################################
 import numpy as np
-
+from ..pseudorandom import seeded_randint
 
 #####################################################################################################################
 # Constants
@@ -13,7 +13,7 @@ import numpy as np
 shot_cool_down = 5
 enemy_move_interval = 12
 enemy_shot_interval = 10
-
+max_clock = 2500
 
 #####################################################################################################################
 # Env 
@@ -29,7 +29,7 @@ enemy_shot_interval = 10
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping = True, seed = None):
+    def __init__(self, ramping = True):
         self.channels ={
             'cannon':0,
             'alien':1,
@@ -40,7 +40,6 @@ class Env:
         }
         self.action_map = ['n','l','u','r','d','f']
         self.ramping = ramping
-        self.random = np.random.RandomState(seed)
         self.reset()
 
     # Update environment according to agent action
@@ -85,7 +84,7 @@ class Env:
             if(self.alien_map[9,self.pos]):
                 self.terminal = True
         if(self.alien_shot_timer==0):
-            self.alien_shot_timer = enemy_shot_interval
+            self.alien_shot_timer = enemy_shot_interval + self._randint(0,3)
             nearest_alien = self._nearest_alien(self.pos)
             self.e_bullet_map[nearest_alien[0], nearest_alien[1]] = 1
 
@@ -104,6 +103,11 @@ class Env:
                 self.enemy_move_interval-=1
                 self.ramp_index+=1
             self.alien_map[0:4,2:8] = 1
+
+        #Increment the clock
+        self.clock += 1
+        if self.clock == max_clock: self.terminal = True
+
         return r, self.terminal
 
     # Find the alien closest to player in manhattan distance, currently used to decide which alien shoots
@@ -118,7 +122,16 @@ class Env:
     # Query the current level of the difficulty ramp, could be used as additional input to agent for example
     def difficulty_ramp(self):
         return self.ramp_index
-            
+
+    # gets a random int in [min, max). depends only on seed and clock (but generates independent random numbers for multiple subsequent calls with a constant seed and clock)
+    def _randint(self, min, max):
+        if not hasattr(self, "current_clock") or self.current_clock != self.clock:
+            self.current_clock = self.clock
+            self.clockwise_random_offset = 0
+        else:
+            self.clockwise_random_offset += seeded_randint(self.seed + self.clock, 0, 1000)
+        return seeded_randint(self.seed + self.clock + self.clockwise_random_offset, min, max)
+
     # Process the game-state into the 10x10xn state provided to the agent and return
     def state(self):
         state = np.zeros((10,10,len(self.channels)),dtype=bool)
@@ -133,8 +146,11 @@ class Env:
         return state
 
     # Reset to start state for new episode
-    def reset(self):
-        self.pos = 5
+    def reset(self, seed=None):
+        if seed is None: seed = np.random.randint(0, 10000)
+        self.seed = seed
+        self.clock = 0
+        self.pos = self._randint(0, 10)
         self.f_bullet_map = np.zeros((10,10))
         self.e_bullet_map = np.zeros((10,10))
         self.alien_map = np.zeros((10,10))

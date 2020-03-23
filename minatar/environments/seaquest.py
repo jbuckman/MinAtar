@@ -4,7 +4,7 @@
 # Tian Tian (ttian@ualberta.ca)                                                                                #
 ################################################################################################################
 import numpy as np
-
+from ..pseudorandom import seeded_randint
 
 #####################################################################################################################
 # Constants
@@ -19,7 +19,7 @@ shot_cool_down = 5
 enemy_shot_interval = 10
 enemy_move_interval = 5
 diver_move_interval = 5
-
+max_clock = 2500
 
 #####################################################################################################################
 # Env 
@@ -40,7 +40,7 @@ diver_move_interval = 5
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping = True, seed = None):
+    def __init__(self, ramping = True):
         self.channels ={
             'sub_front':0,
             'sub_back':1,
@@ -55,7 +55,6 @@ class Env:
         }
         self.action_map = ['n','l','u','r','d','f']
         self.ramping = ramping
-        self.random = np.random.RandomState(seed)
         self.reset()
 
     # Update environment according to agent action
@@ -201,6 +200,11 @@ class Env:
                     self.terminal = True
                 else:
                     r+=self._surface()
+
+        #Increment the clock
+        self.clock += 1
+        if self.clock == max_clock: self.terminal = True
+
         return r, self.terminal
 
     # Called when player hits surface (top row) if they have no divers, this ends the game, 
@@ -226,10 +230,10 @@ class Env:
     # Spawn an enemy fish or submarine in random row and random direction,
     # if the resulting row and direction would lead to a collision, do nothing instead
     def _spawn_enemy(self):
-        lr = self.random.choice([True,False])
-        is_sub = self.random.choice([True,False], p=[1/3,2/3])
+        lr = bool(self._randint(0,2)) # self.random.choice([True,False])
+        is_sub = bool(self._randint(0,3) == 0) # self.random.choice([True,False], p=[1/3,2/3])
         x = 0 if lr else 9
-        y = self.random.choice(np.arange(1,9))
+        y = self._randint(1,9) # self.random.choice(np.arange(1,9))
 
         # Do not spawn in same row an opposite direction as existing
         if(any([z[1]==y and z[2]!=lr for z in self.e_subs+self.e_fish])):
@@ -241,10 +245,19 @@ class Env:
 
     # Spawn a diver in random row with random direction
     def _spawn_diver(self):
-        lr = self.random.choice([True,False])
+        lr = bool(self._randint(0,2)) # self.random.choice([True,False])
         x = 0 if lr else 9
-        y = self.random.choice(np.arange(1,9))
+        y = self._randint(1,9) # self.random.choice(np.arange(1,9))
         self.divers+=[[x,y,lr,diver_move_interval]]
+
+    # gets a random int in [min, max). depends only on seed and clock (but generates independent random numbers for multiple subsequent calls with a constant seed and clock)
+    def _randint(self, min, max):
+        if not hasattr(self, "current_clock") or self.current_clock != self.clock:
+            self.current_clock = self.clock
+            self.clockwise_random_offset = 0
+        else:
+            self.clockwise_random_offset += seeded_randint(self.seed + self.clock, 0, 1000)
+        return seeded_randint(self.seed + self.clock + self.clockwise_random_offset, min, max)
 
     # Query the current level of the difficulty ramp, could be used as additional input to agent for example
     def difficulty_ramp(self):
@@ -281,7 +294,10 @@ class Env:
         return state
 
     # Reset to start state for new episode
-    def reset(self):
+    def reset(self, seed=None):
+        if seed is None: seed = np.random.randint(0, 10000)
+        self.seed = seed
+        self.clock = 0
         self.oxygen = max_oxygen
         self.diver_count = 0
         self.sub_x = 5

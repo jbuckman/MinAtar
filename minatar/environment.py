@@ -15,10 +15,10 @@ import numpy as np
 #
 #####################################################################################################################
 class Environment:
-    def __init__(self, env_name, sticky_action_prob = 0.1, difficulty_ramping = True, random_seed = None):
+    def __init__(self, env_name, sticky_action_prob = 0.1, difficulty_ramping = True):
         env_module = import_module('minatar.environments.'+env_name)
         self.env_name = env_name
-        self.env = env_module.Env(ramping = difficulty_ramping, seed = random_seed)
+        self.env = env_module.Env(ramping = difficulty_ramping)
         self.n_channels = self.env.state_shape()[2]
         self.sticky_action_prob = sticky_action_prob
         self.last_action = 0
@@ -37,8 +37,8 @@ class Environment:
         return self.env.state()
 
     # Wrapper for env.reset
-    def reset(self):
-        return self.env.reset()
+    def reset(self, seed=None):
+        return self.env.reset(seed)
 
     # Wrapper for env.state_shape
     def state_shape(self):
@@ -88,3 +88,41 @@ class Environment:
     def close_display(self):
         plt.close()
         self.closed = True
+
+#####################################################################################################################
+# Batch Environment
+#
+# Collects several environments into a batch so they can all be run in parallel.
+#
+#####################################################################################################################
+class BatchEnvironment:
+    def __init__(self, n, env_name, sticky_action_prob = 0.1, difficulty_ramping = True):
+        self.n = n
+        self.envs = [Environment(env_name, sticky_action_prob, difficulty_ramping) for _ in range(n)]
+
+    # Wrapper for env.act
+    def act(self, actions):
+        outs = [e.act(a) for e, a in zip(self.envs, actions)]
+        return tuple(np.stack(v) for v in zip(*outs))
+
+    # Wrapper for env.reset
+    def reset(self, seeds=None):
+        if seeds == None: seeds = [None] * self.n
+        outs = [e.reset(seed) for e, seed in zip(self.envs, seeds)]
+        return np.stack(outs)
+
+    # Wrapper for env.state_shape
+    def state_shape(self):
+        return self.envs[0].state_shape()
+
+    # All MinAtar environments have 6 actions
+    def num_actions(self):
+        return 6
+
+    # Name of the MinAtar game associated with this environment
+    def game_name(self):
+        return self.envs[0].env_name
+
+    # Wrapper for env.minimal_action_set
+    def minimal_action_set(self):
+        return self.envs[0].minimal_action_set()

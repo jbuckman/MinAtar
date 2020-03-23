@@ -8,6 +8,7 @@ setup(
     author='Kenny Young',
     author_email='kjyoung@ualberta.com',
     license='GPL',
+    include_package_data=True,
     packages=['minatar', 'minatar.environments'],
     install_requires=[
         'cycler>=0.10.0',

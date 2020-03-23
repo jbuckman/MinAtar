@@ -4,7 +4,13 @@
 # Tian Tian (ttian@ualberta.ca)                                                                                #
 ################################################################################################################
 import numpy as np
+from ..pseudorandom import seeded_randint
 
+#####################################################################################################################
+# Constants
+#
+#####################################################################################################################
+max_clock = 2500
 
 #####################################################################################################################
 # Env
@@ -17,7 +23,7 @@ import numpy as np
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping = None, seed = None):
+    def __init__(self, ramping = None):
         self.channels ={
             'paddle':0,
             'ball':1,
@@ -25,7 +31,6 @@ class Env:
             'brick':3,
         }
         self.action_map = ['n','l','u','r','d','f']
-        self.random = np.random.RandomState(seed)
         self.reset()
 
     # Update environment according to agent action
@@ -91,9 +96,22 @@ class Env:
         if(not strike_toggle):
             self.strike = False
 
+        #Increment the clock
+        self.clock += 1
+        if self.clock == max_clock: self.terminal = True
+
         self.ball_x = new_x
         self.ball_y = new_y
         return r, self.terminal
+
+    # gets a random int in [min, max). depends only on seed and clock (but generates independent random numbers for multiple subsequent calls with a constant seed and clock)
+    def _randint(self, min, max):
+        if not hasattr(self, "current_clock") or self.current_clock != self.clock:
+            self.current_clock = self.clock
+            self.clockwise_random_offset = 0
+        else:
+            self.clockwise_random_offset += seeded_randint(self.seed + self.clock, 0, 1000)
+        return seeded_randint(self.seed + self.clock + self.clockwise_random_offset, min, max)
 
     # Query the current level of the difficulty ramp, difficulty does not ramp in this game, so return None
     def difficulty_ramp(self):
@@ -109,11 +127,14 @@ class Env:
         return state
 
     # Reset to start state for new episode
-    def reset(self):
+    def reset(self, seed=None):
+        if seed is None: seed = np.random.randint(0, 10000)
+        self.seed = seed
+        self.clock = 0
         self.ball_y = 3
-        ball_start = self.random.choice(2)
+        ball_start = self._randint(0, 2)
         self.ball_x, self.ball_dir = [(0,2),(9,3)][ball_start]
-        self.pos = 4
+        self.pos = self._randint(0, 10)
         self.brick_map = np.zeros((10,10))
         self.brick_map[1:4,:] = 1
         self.strike = False

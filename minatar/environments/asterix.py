@@ -4,7 +4,7 @@
 # Tian Tian (ttian@ualberta.ca)                                                                                #
 ################################################################################################################
 import numpy as np
-
+from ..pseudorandom import seeded_randint
 
 #####################################################################################################################
 # Constants
@@ -14,7 +14,7 @@ ramp_interval = 100
 init_spawn_speed = 10
 init_move_interval = 5
 shot_cool_down = 5
-
+max_clock = 2500
 
 #####################################################################################################################
 # Env 
@@ -26,7 +26,7 @@ shot_cool_down = 5
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping = True, seed = None):
+    def __init__(self, ramping = True):
         self.channels ={
             'player':0,
             'enemy':1,
@@ -35,7 +35,6 @@ class Env:
         }
         self.action_map = ['n','l','u','r','d','f']
         self.ramping = ramping
-        self.random = np.random.RandomState(seed)
         self.reset()
 
     # Update environment according to agent action
@@ -102,18 +101,32 @@ class Env:
                     self.spawn_speed-=1
                 self.ramp_index+=1
                 self.ramp_timer=ramp_interval
+
+        #Increment the clock
+        self.clock += 1
+        if self.clock == max_clock: self.terminal = True
+
         return r, self.terminal
 
     # Spawn a new enemy or treasure at a random location with random direction (if all rows are filled do nothing)
     def _spawn_entity(self):
-        lr = self.random.choice([True,False])
-        is_gold = self.random.choice([True,False], p=[1/3,2/3])
+        lr = bool(self._randint(0, 2)) # self.random.choice([True,False])
+        is_gold = bool(self._randint(0, 3) == 0) # self.random.choice([True,False], p=[1/3,2/3])
         x = 0 if lr else 9
         slot_options = [i for i in range(len(self.entities)) if self.entities[i]==None]
         if(not slot_options):
             return
-        slot = self.random.choice(slot_options)
+        slot = slot_options[self._randint(0,len(slot_options))] # self.random.choice(slot_options)
         self.entities[slot] = [x,slot+1,lr,is_gold]
+
+    # gets a random int in [min, max). depends only on seed and clock (but generates independent random numbers for multiple subsequent calls with a constant seed and clock)
+    def _randint(self, min, max):
+        if not hasattr(self, "current_clock") or self.current_clock != self.clock:
+            self.current_clock = self.clock
+            self.clockwise_random_offset = 0
+        else:
+            self.clockwise_random_offset += seeded_randint(self.seed + self.clock, 0, 1000)
+        return seeded_randint(self.seed + self.clock + self.clockwise_random_offset, min, max)
 
     # Query the current level of the difficulty ramp, could be used as additional input to agent for example
     def difficulty_ramp(self):
@@ -133,7 +146,10 @@ class Env:
         return state
 
     # Reset to start state for new episode
-    def reset(self):
+    def reset(self, seed=None):
+        if seed is None: seed = np.random.randint(0, 10000)
+        self.seed = seed
+        self.clock = 0
         self.player_x = 5
         self.player_y = 5
         self.entities = [None]*8

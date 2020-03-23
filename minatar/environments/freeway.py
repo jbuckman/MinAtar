@@ -4,7 +4,7 @@
 # Tian Tian (ttian@ualberta.ca)                                                                                #
 ################################################################################################################
 import numpy as np
-
+from ..pseudorandom import seeded_randint
 
 #####################################################################################################################
 # Constants
@@ -12,7 +12,7 @@ import numpy as np
 #####################################################################################################################
 player_speed = 3
 time_limit = 2500
-
+max_clock = 2500
 
 #####################################################################################################################
 # Env
@@ -28,7 +28,7 @@ time_limit = 2500
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping = None, seed = None):
+    def __init__(self, ramping = None):
         self.channels ={
             'chicken':0,
             'car':1,
@@ -39,7 +39,6 @@ class Env:
             'speed5':6,
         }
         self.action_map = ['n','l','u','r','d','f']
-        self.random = np.random.RandomState(seed)
         self.reset()
 
     # Update environment according to agent action
@@ -84,6 +83,11 @@ class Env:
         self.terminate_timer-=1
         if(self.terminate_timer<0):
             self.terminal = True
+
+        #Increment the clock
+        self.clock += 1
+        if self.clock == max_clock: self.terminal = True
+
         return r, self.terminal
 
     # Query the current level of the difficulty ramp, difficulty does not ramp in this game, so return None
@@ -116,8 +120,8 @@ class Env:
 
     # Randomize car speeds and directions, also reset their position if initialize=True
     def _randomize_cars(self, initialize=False):
-        speeds = self.random.randint(1,6,8)
-        directions = self.random.choice([-1,1],8)
+        speeds = np.array([self._randint(1,6) for _ in range(8)]) # self.random.randint(1,6,8)
+        directions = np.array([self._randint(0,2)*2-1 for _ in range(8)]) # self.random.choice([-1,1],8)
         speeds*=directions
         if(initialize):
             self.cars = []
@@ -127,8 +131,20 @@ class Env:
             for i in range(8):
                 self.cars[i][2:4]=[abs(speeds[i]),speeds[i]]
 
+    # gets a random int in [min, max). depends only on seed and clock (but generates independent random numbers for multiple subsequent calls with a constant seed and clock)
+    def _randint(self, min, max):
+        if not hasattr(self, "current_clock") or self.current_clock != self.clock:
+            self.current_clock = self.clock
+            self.clockwise_random_offset = 0
+        else:
+            self.clockwise_random_offset += seeded_randint(self.seed + self.clock, 0, 1000)
+        return seeded_randint(self.seed + self.clock + self.clockwise_random_offset, min, max)
+
     # Reset to start state for new episode
-    def reset(self):
+    def reset(self, seed=None):
+        if seed is None: seed = np.random.randint(0, 10000)
+        self.seed = seed
+        self.clock = 0
         self._randomize_cars(initialize=True)
         self.pos = 9
         self.move_timer = player_speed
