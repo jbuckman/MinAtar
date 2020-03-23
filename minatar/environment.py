@@ -118,7 +118,7 @@ class BatchEnvironment:
         return np.stack([e.state() for e in self.envs])
 
     # Wrapper for env.state
-    def seed(self):
+    def seeds(self):
         return np.stack([e.seed() for e in self.envs])
 
     # Wrapper for env.reset
