@@ -119,14 +119,10 @@ class Env:
         slot = slot_options[self._randint(0,len(slot_options))] # self.random.choice(slot_options)
         self.entities[slot] = [x,slot+1,lr,is_gold]
 
-    # gets a random int in [min, max). depends only on seed and clock (but generates independent random numbers for multiple subsequent calls with a constant seed and clock)
+    # gets a random int in [min, max)
     def _randint(self, min, max):
-        if not hasattr(self, "current_clock") or self.current_clock != self.clock:
-            self.current_clock = self.clock
-            self.clockwise_random_offset = 0
-        else:
-            self.clockwise_random_offset += seeded_randint(self.seed + self.clock, 0, 1000)
-        return seeded_randint(self.seed + self.clock + self.clockwise_random_offset, min, max)
+        self.seed += seeded_randint(self.seed, 0, 1000)
+        return seeded_randint(self.seed, min, max)
 
     # Query the current level of the difficulty ramp, could be used as additional input to agent for example
     def difficulty_ramp(self):
