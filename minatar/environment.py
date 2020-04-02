@@ -52,9 +52,21 @@ class Environment:
     def reward_range(self):
         return self.env.reward_range()
 
+    # Wrapper for env.snapshot_size
+    def snapshot_size(self):
+        return self.env.snapshot_size()
+
     # All MinAtar environments have 6 actions
     def num_actions(self):
         return 6
+
+    # Snapshot underlying env
+    def snapshot(self):
+        return self.env.snapshot()
+
+    # Restore underlying env from snapshot
+    def restore(self, snapshot):
+        self.env.restore(snapshot)
 
     # Name of the MinAtar game associated with this environment
     def game_name(self):
@@ -134,9 +146,22 @@ class BatchEnvironment:
     def reward_range(self):
         return self.envs[0].reward_range()
 
+    # Wrapper for env.snapshot_size
+    def snapshot_size(self):
+        return self.envs[0].snapshot_size()
+
     # All MinAtar environments have 6 actions
     def num_actions(self):
         return 6
+
+    # Wrapper
+    def snapshot(self):
+        return np.stack([env.snapshot() for env in self.envs], axis=0)
+
+    # Wrapper
+    def restore(self, snapshots):
+        for env, snapshot in zip(self.envs, snapshots):
+            env.restore(snapshot)
 
     # Name of the MinAtar game associated with this environment
     def game_name(self):

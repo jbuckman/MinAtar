@@ -138,10 +138,30 @@ class Env:
         self.last_y = self.ball_y
         self.terminal = False
 
+    # take a snapshot that can be restored from later
+    def snapshot(self):
+        return np.array(
+                [self.seed, self.clock, self.ball_y, self.ball_x, self.ball_dir,
+                self.pos] + self.brick_map.reshape(-1).tolist() + [self.strike,
+                self.last_x, self.last_y, self.terminal], dtype=np.int)
+
+    # restore from a snapshot
+    def restore(self, snapshot):
+        self.seed, self.clock, self.ball_y, self.ball_x, self.ball_dir, self.pos = snapshot[:6]
+        self.brick_map = snapshot[6:106].reshape((10,10))
+        self.strike, self.last_x, self.last_y, self.terminal = snapshot[106:]
+        self.strike = bool(self.strike)
+        self.terminal = bool(self.terminal)
+
     # Dimensionality of the game-state (10x10xn)
     def state_shape(self):
         return [10,10,len(self.channels)]
 
+    # Number of ints in the snapshot
+    def snapshot_size(self):
+        return 110
+
+    # Range of per-transition rewards
     def reward_range(self):
         return (0, 1)
 

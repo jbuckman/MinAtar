@@ -85,7 +85,7 @@ def play():
     G.set(G.get()+r)
     gui.display_state(env.state())
     gui.set_message("Score: " + str(G.get()))
-    gui.update(50, play)
+    gui.update(500, play)
 
 # Hook up the key handler and initiate game play
 gui.overwrite_key_handle(on_key_event, on_release_event)
