@@ -38,7 +38,8 @@ class Env:
         r = 0
         if(self.terminal):
             return r, self.terminal
-            
+
+        a_before = a
         a = self.action_map[a]
 
         # Resolve player action

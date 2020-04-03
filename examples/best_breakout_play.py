@@ -8,7 +8,7 @@
 import random, numpy, argparse, time
 from minatar import Environment
 
-NUM_EPISODES = 1000
+NUM_EPISODES = 32 # 1000
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--game", "-g", type=str)
