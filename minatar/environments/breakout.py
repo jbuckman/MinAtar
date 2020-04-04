@@ -295,15 +295,15 @@ class VectorizedEnv(Env):
 
     def snapshot(self):
         return np.cast[np.int](np.concatenate(
-                [self.seeds[:,None], self.clock[:,None], self.ball_y[:,None], self.ball_x[:,None], self.ball_dir[:,None],
+                [self.seeds[:,None], self.clock[:,None], self.time_since_reward[:,None], self.ball_y[:,None], self.ball_x[:,None], self.ball_dir[:,None],
                 self.pos[:,None], self.brick_map.reshape((self.num_envs,100)), self.strike[:,None],
                 self.last_x[:,None], self.last_y[:,None], self.terminal[:,None]], axis=1))
 
     def restore(self, snapshot_batch):
         self.num_envs = snapshot_batch.shape[0]
-        self.seeds, self.clock, self.ball_y, self.ball_x, self.ball_dir, self.pos = [snapshot_batch[:,i] for i in range(6)]
-        self.brick_map = snapshot_batch[:,6:106].reshape((self.num_envs,10,10))
-        self.strike, self.last_x, self.last_y, self.terminal = [snapshot_batch[:,i] for i in range(106,snapshot_batch.shape[1])]
+        self.seeds, self.clock, self.time_since_reward, self.ball_y, self.ball_x, self.ball_dir, self.pos = [snapshot_batch[:,i] for i in range(7)]
+        self.brick_map = snapshot_batch[:,7:107].reshape((self.num_envs,10,10))
+        self.strike, self.last_x, self.last_y, self.terminal = [snapshot_batch[:,i] for i in range(107,snapshot_batch.shape[1])]
         self.strike = np.cast[np.bool](self.strike)
         self.terminal = np.cast[np.bool](self.terminal)
 
