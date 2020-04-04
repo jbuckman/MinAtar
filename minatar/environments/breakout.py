@@ -173,7 +173,7 @@ class Env:
         return [self.action_map.index(x) for x in minimal_actions]
 
 class VectorizedEnv(Env):
-    def __init__(self, num_envs=None, seeds=None, ramping = None):
+    def __init__(self, default_num_envs=None, seeds=None, ramping = None):
         self.channels ={
             'paddle':0,
             'ball':1,
@@ -182,15 +182,16 @@ class VectorizedEnv(Env):
         }
         self.action_map = ['n','l','u','r','d','f']
         self.inverse_action_map = {self.action_map[i]: i for i in range(len(self.action_map))}
-        if num_envs is not None or seeds is not None: self.reset(num_envs, seeds)
+        self.default_num_envs = default_num_envs
+        if default_num_envs is not None or seeds is not None: self.reset(default_num_envs, seeds)
 
     # Reset to start state for new episode
     def reset(self, num_envs=None, seeds=None):
         if num_envs is None:
-            assert seeds is not None
-            self.num_envs = len(seeds)
-        else:
-            self.num_envs = num_envs
+            if seeds is not None: num_envs = len(seeds)
+            elif self.default_num_envs is not None: num_envs = self.default_num_envs
+            else: raise Exception("if no default was given at init, must specify either a num_envs or a set of seeds")
+        self.num_envs = num_envs
         if seeds is None:
             seeds = np.random.randint(0, 10000, [self.num_envs])
         self.seeds = seeds
