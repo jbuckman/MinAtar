@@ -165,7 +165,7 @@ class Env:
 
     # Number of ints in the snapshot
     def snapshot_size(self):
-        return 110
+        return 111
 
     # Range of per-transition rewards
     def reward_range(self):
