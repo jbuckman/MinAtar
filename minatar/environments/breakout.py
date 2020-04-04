@@ -11,6 +11,7 @@ from ..pseudorandom import seeded_randint
 #
 #####################################################################################################################
 max_clock = 2500
+max_time_without_reward = 50
 
 #####################################################################################################################
 # Env
@@ -37,10 +38,6 @@ class Env:
     # Update environment according to agent action
     def act(self, a):
         r = 0
-        if(self.terminal):
-            return r, self.terminal
-
-        a_before = a
         a = self.action_map[a]
 
         # Resolve player action
@@ -100,10 +97,16 @@ class Env:
 
         #Increment the clock
         self.clock += 1
-        if self.clock == max_clock: self.terminal = True
+        self.time_since_reward += 1
+        if r > 0: self.time_since_reward = 0
+        if self.clock == max_clock or self.time_since_reward == max_time_without_reward: self.terminal = True
 
         self.ball_x = new_x
         self.ball_y = new_y
+        if(self.terminal):
+            self.ball_x = 5
+            self.ball_y = 5
+            return 0, self.terminal
         return r, self.terminal
 
     # gets a random int in [min, max)
@@ -129,6 +132,7 @@ class Env:
         if seed is None: seed = np.random.randint(0, 10000)
         self.seed = seed
         self.clock = 0
+        self.time_since_reward = 0
         self.ball_y = 3
         ball_start = self._randint(0, 2)
         self.ball_x, self.ball_dir = [(0,2),(9,3)][ball_start]
@@ -143,15 +147,15 @@ class Env:
     # take a snapshot that can be restored from later
     def snapshot(self):
         return np.array(
-                [self.seed, self.clock, self.ball_y, self.ball_x, self.ball_dir,
+                [self.seed, self.clock, self.time_since_reward, self.ball_y, self.ball_x, self.ball_dir,
                 self.pos] + self.brick_map.reshape(-1).tolist() + [self.strike,
                 self.last_x, self.last_y, self.terminal], dtype=np.int)
 
     # restore from a snapshot
     def restore(self, snapshot):
-        self.seed, self.clock, self.ball_y, self.ball_x, self.ball_dir, self.pos = snapshot[:6]
-        self.brick_map = snapshot[6:106].reshape((10,10))
-        self.strike, self.last_x, self.last_y, self.terminal = snapshot[106:]
+        self.seed, self.clock, self.time_since_reward, self.ball_y, self.ball_x, self.ball_dir, self.pos = snapshot[:7]
+        self.brick_map = snapshot[7:107].reshape((10,10))
+        self.strike, self.last_x, self.last_y, self.terminal = snapshot[107:]
         self.strike = bool(self.strike)
         self.terminal = bool(self.terminal)
 
@@ -196,6 +200,7 @@ class VectorizedEnv(Env):
             seeds = np.random.randint(0, 10000, [self.num_envs])
         self.seeds = np.array(seeds)
         self.clock = np.zeros(self.num_envs)
+        self.time_since_reward = np.zeros(self.num_envs)
         self.ball_y = np.full(self.num_envs, 3)
         ball_start = self._randint(0, 2)
         ball_x_and_dir = np.array([(0,2),(9,3)])[ball_start]
@@ -210,7 +215,7 @@ class VectorizedEnv(Env):
 
     def act(self, a):
         r = np.zeros(self.num_envs)
-        already_terminal = self.terminal[:]
+        already_terminal = self.terminal.copy()
 
         self.pos[a == self.inverse_action_map['l']] -= 1
         self.pos[a == self.inverse_action_map['r']] += 1
@@ -263,11 +268,15 @@ class VectorizedEnv(Env):
         self.terminal[(bottom_collision_locs & ~(paddle_collision_locs | edge_paddle_collision_locs))] = True
 
         r[already_terminal] = 0.
+        self.terminal[already_terminal] = True
         self.strike[~strike_toggle] = False
 
         #Increment the clock
         self.clock += 1
+        self.time_since_reward += 1
+        self.time_since_reward[r != 0.] = 0
         self.terminal[self.clock == max_clock] = True
+        self.terminal[self.time_since_reward == max_time_without_reward] = True
 
         new_x[self.terminal] = 5
         new_y[self.terminal] = 5
