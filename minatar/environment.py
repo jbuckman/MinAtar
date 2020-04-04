@@ -116,7 +116,7 @@ class Environment:
 #
 #####################################################################################################################
 class BatchEnvironment:
-    def __init__(self, n, env_name, sticky_action_prob = 0.1, difficulty_ramping = True):
+    def __init__(self, n, env_name, sticky_action_prob = 0.0, difficulty_ramping = True):
         self.n = n
         self.envs = [Environment(env_name, sticky_action_prob, difficulty_ramping) for _ in range(n)]
 
@@ -170,3 +170,30 @@ class BatchEnvironment:
     # Wrapper for env.minimal_action_set
     def minimal_action_set(self):
         return self.envs[0].minimal_action_set()
+
+#####################################################################################################################
+# Vectorized Environment
+#
+# Collects several environments into a batch so they can all be run in parallel.
+#
+#####################################################################################################################
+class VectorizedEnvironment(Environment):
+    def __init__(self, n, env_name, sticky_action_prob = 0.0, difficulty_ramping = True):
+        self.n = n
+        env_module = import_module('minatar.environments.'+env_name)
+        self.env_name = env_name
+        self.env = env_module.VectorizedEnv(n, ramping = difficulty_ramping)
+        self.n_channels = self.env.state_shape()[2]
+        self.sticky_action_prob = sticky_action_prob
+        self.last_action = 0
+        if sticky_action_prob > 0.0: raise Exception("unimplemented")
+        self.visualized = False
+        self.closed = False
+
+    # Wrapper for env.state
+    def seeds(self):
+        return self.env.seeds
+
+    # Wrapper for env.reset
+    def reset(self, n=None, seeds=None):
+        return self.env.reset(n, seeds)

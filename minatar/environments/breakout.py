@@ -203,8 +203,8 @@ class VectorizedEnv(Env):
         self.brick_map = np.zeros((self.num_envs,10,10))
         self.brick_map[:,1:4,:] = 1
         self.strike = np.full(self.num_envs, False)
-        self.last_x = self.ball_x
-        self.last_y = self.ball_y
+        self.last_x = self.ball_x.copy()
+        self.last_y = self.ball_y.copy()
         self.terminal = np.full(self.num_envs, False)
 
     def act(self, a):
@@ -216,10 +216,10 @@ class VectorizedEnv(Env):
         self.pos = np.clip(self.pos, 0, 9)
 
         # Update ball position
-        self.last_x = self.ball_x
-        self.last_y = self.ball_y
-        new_x = self.last_x[:]
-        new_y = self.last_y[:]
+        self.last_x[:] = self.ball_x
+        self.last_y[:] = self.ball_y
+        new_x = self.last_x.copy()
+        new_y = self.last_y.copy()
         new_x[self.ball_dir == 0] -= 1
         new_x[self.ball_dir == 1] += 1
         new_x[self.ball_dir == 2] += 1
@@ -262,31 +262,34 @@ class VectorizedEnv(Env):
         self.terminal[(bottom_collision_locs & ~(paddle_collision_locs | edge_paddle_collision_locs))] = True
 
         r[already_terminal] = 0.
-
         self.strike[~strike_toggle] = False
 
         #Increment the clock
         self.clock += 1
         self.terminal[self.clock == max_clock] = True
 
+        new_x[self.terminal] = 5
+        new_y[self.terminal] = 5
+
         self.ball_x = new_x
         self.ball_y = new_y
         return r, self.terminal
 
     def state(self):
-        state = np.zeros((10,10,len(self.channels)),dtype=bool)
-        state[self.ball_y,self.ball_x,self.channels['ball']] = 1
-        state[9,self.pos, self.channels['paddle']] = 1
-        state[self.last_y,self.last_x,self.channels['trail']] = 1
-        state[:,:,self.channels['brick']] = self.brick_map
+        state = np.zeros((self.num_envs,10,10,len(self.channels)),dtype=bool)
+        state[np.arange(self.num_envs),self.ball_y,self.ball_x,self.channels['ball']] = 1
+        state[np.arange(self.num_envs),9,self.pos, self.channels['paddle']] = 1
+        state[np.arange(self.num_envs),self.last_y,self.last_x,self.channels['trail']] = 1
+        state[:,:,:,self.channels['brick']] = self.brick_map
         return state
 
     def restore(self, snapshot_batch):
-        self.seed, self.clock, self.ball_y, self.ball_x, self.ball_dir, self.pos = snapshot[:6]
-        self.brick_map = snapshot[6:106].reshape((10,10))
-        self.strike, self.last_x, self.last_y, self.terminal = snapshot[106:]
-        self.strike = bool(self.strike)
-        self.terminal = bool(self.terminal)
+        self.num_envs = snapshot_batch.shape[0]
+        self.seeds, self.clock, self.ball_y, self.ball_x, self.ball_dir, self.pos = [snapshot_batch[:,i] for i in range(6)]
+        self.brick_map = snapshot_batch[:,6:106].reshape((self.num_envs,10,10))
+        self.strike, self.last_x, self.last_y, self.terminal = [snapshot_batch[:,i] for i in range(106,snapshot_batch.shape[1])]
+        self.strike = np.cast[np.bool](self.strike)
+        self.terminal = np.cast[np.bool](self.terminal)
 
     def _randint(self, min, max):
         for i, seed in enumerate(self.seeds):
