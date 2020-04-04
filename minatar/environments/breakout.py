@@ -194,7 +194,7 @@ class VectorizedEnv(Env):
         self.num_envs = num_envs
         if seeds is None:
             seeds = np.random.randint(0, 10000, [self.num_envs])
-        self.seeds = seeds
+        self.seeds = np.array(seeds)
         self.clock = np.zeros(self.num_envs)
         self.ball_y = np.full(self.num_envs, 3)
         ball_start = self._randint(0, 2)
