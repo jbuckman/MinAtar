@@ -28,7 +28,7 @@ while e < NUM_EPISODES:
     T = 0
 
     # Initialize the environment
-    env.reset()
+    env.reset(seed=e)
     terminated = False
 
     while(not terminated):
