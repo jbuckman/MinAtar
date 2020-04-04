@@ -283,6 +283,12 @@ class VectorizedEnv(Env):
         state[:,:,:,self.channels['brick']] = self.brick_map
         return state
 
+    def snapshot(self):
+        return np.cast[np.int](np.concatenate(
+                [self.seeds[:,None], self.clock[:,None], self.ball_y[:,None], self.ball_x[:,None], self.ball_dir[:,None],
+                self.pos[:,None], self.brick_map.reshape((self.num_envs,100)), self.strike[:,None],
+                self.last_x[:,None], self.last_y[:,None], self.terminal[:,None]], axis=1))
+
     def restore(self, snapshot_batch):
         self.num_envs = snapshot_batch.shape[0]
         self.seeds, self.clock, self.ball_y, self.ball_x, self.ball_dir, self.pos = [snapshot_batch[:,i] for i in range(6)]
