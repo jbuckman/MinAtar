@@ -289,7 +289,7 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
     avg_return_init = 0.0
     data_return_init = []
     frame_stamp_init = []
-    logname = f"benchmark/dqn/{env.env_name}"
+    logname = f"benchmark/dqn/{env.env_name}.csv"
     with open(logname, "w") as f: f.write(f"steps,score")
 
     # Load model and optimizer if load_path is not None
