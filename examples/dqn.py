@@ -159,7 +159,7 @@ def get_state(s):
 # Output: next state, action, reward, is_terminated
 #
 ################################################################################################################
-def world_dynamics(t, replay_start_size, num_actions, s, env, policy_net):
+def world_dynamics(t, replay_start_size, num_actions, s, env, policy_net, test=False):
 
     # A uniform random policy is run before the learning starts
     if t < replay_start_size:
@@ -170,6 +170,7 @@ def world_dynamics(t, replay_start_size, num_actions, s, env, policy_net):
         # remaining frames
         epsilon = END_EPSILON if t - replay_start_size >= FIRST_N_FRAMES \
             else ((END_EPSILON - EPSILON) / FIRST_N_FRAMES) * (t - replay_start_size) + EPSILON
+        if test: epsilon = 0.0
 
         if numpy.random.binomial(1, epsilon) == 1:
             action = torch.tensor([[random.randrange(num_actions)]], device=device)
@@ -375,7 +376,6 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
         # Save the return for each episode
         data_return.append(G)
         frame_stamp.append(t)
-        with open(logname, "a") as f: f.write(f"\n{t},{G:.3}")
 
         # Logging exponentiated return only when verbose is turned on and only at 1000 episode intervals
         avg_return = 0.99 * avg_return + 0.01 * G
@@ -397,6 +397,20 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
                         'frame_stamp_per_run': frame_stamp,
                         'replay_buffer': r_buffer if not replay_off else []
             }, output_file_name + "_checkpoint")
+
+        if t % 1000 == 0:
+            G_test = 0.
+            # Initialize the environment and start state
+            env.reset()
+            s = get_state(env.state())
+            is_terminated = False
+            while (not is_terminated):
+                # Generate data
+                s_prime, action, reward, is_terminated = world_dynamics(t, replay_start_size, num_actions, s, env, policy_net, test=True)
+                G += reward.item()
+                # Continue the process
+                s = s_prime
+            with open(logname, "a") as f: f.write(f"\n{t},{G_test:.3}")
 
     # Print final logging info
     logging.info("Avg return: " + str(numpy.around(avg_return, 2)) + " | Time per frame: " + str((time.time()-t_start)/t))
