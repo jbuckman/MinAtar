@@ -170,9 +170,8 @@ def world_dynamics(t, replay_start_size, num_actions, s, env, policy_net, test=F
         # remaining frames
         epsilon = END_EPSILON if t - replay_start_size >= FIRST_N_FRAMES \
             else ((END_EPSILON - EPSILON) / FIRST_N_FRAMES) * (t - replay_start_size) + EPSILON
-        if test: epsilon = 0.0
 
-        if numpy.random.binomial(1, epsilon) == 1:
+        if not test and numpy.random.binomial(1, epsilon) == 1:
             action = torch.tensor([[random.randrange(num_actions)]], device=device)
         else:
             # State is 10x10xchannel, max(1)[1] gives the max action value (i.e., max_{a} Q(s, a)).
