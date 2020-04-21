@@ -407,7 +407,7 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
             while (not is_terminated):
                 # Generate data
                 s_prime, action, reward, is_terminated = world_dynamics(t, replay_start_size, num_actions, s, env, policy_net, test=True)
-                G += reward.item()
+                G_test += reward.item()
                 # Continue the process
                 s = s_prime
             with open(logname, "a") as f: f.write(f"\n{t},{G_test:.3}")
