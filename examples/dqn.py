@@ -289,6 +289,8 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
     avg_return_init = 0.0
     data_return_init = []
     frame_stamp_init = []
+    logname = f"benchmark/dqn/{env.env_name}"
+    with open(logname, "w") as f: f.write(f"steps,score")
 
     # Load model and optimizer if load_path is not None
     if load_path is not None and isinstance(load_path, str):
@@ -373,6 +375,7 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
         # Save the return for each episode
         data_return.append(G)
         frame_stamp.append(t)
+        with open(logname, "a") as f: f.write(f"\n{t},{G:.3}")
 
         # Logging exponentiated return only when verbose is turned on and only at 1000 episode intervals
         avg_return = 0.99 * avg_return + 0.01 * G
