@@ -292,6 +292,7 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
     frame_stamp_init = []
     logname = f"benchmark/dqn/{env.env_name}.csv"
     with open(logname, "w") as f: f.write(f"steps,score")
+    last_test_t = 0
 
     # Load model and optimizer if load_path is not None
     if load_path is not None and isinstance(load_path, str):
@@ -398,7 +399,7 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
                         'replay_buffer': r_buffer if not replay_off else []
             }, output_file_name + "_checkpoint")
 
-        if t % 1000 == 0:
+        if t - last_test_t > 1000:
             G_test = 0.
             # Initialize the environment and start state
             env.reset()
@@ -411,6 +412,7 @@ def dqn(env, replay_off, target_off, output_file_name, store_intermediate_result
                 # Continue the process
                 s = s_prime
             with open(logname, "a") as f: f.write(f"\n{t},{G_test:.3}")
+            last_test_t = t
 
     # Print final logging info
     logging.info("Avg return: " + str(numpy.around(avg_return, 2)) + " | Time per frame: " + str((time.time()-t_start)/t))
