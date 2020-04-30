@@ -27,7 +27,7 @@ class Environment:
 
     # Wrapper for env.act
     def act(self, a):
-        if(np.random.rand()<self.sticky_action_prob):
+        if(self.env._randint(0,1000)<1000.*self.sticky_action_prob):
             a = self.last_action
         self.last_action = a
         return self.env.act(a)
