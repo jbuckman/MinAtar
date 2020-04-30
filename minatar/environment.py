@@ -15,7 +15,7 @@ import numpy as np
 #
 #####################################################################################################################
 class Environment:
-    def __init__(self, env_name, sticky_action_prob = 0.0, difficulty_ramping = True):
+    def __init__(self, env_name, sticky_action_prob = 0.1, difficulty_ramping = True):
         env_module = import_module('minatar.environments.'+env_name)
         self.env_name = env_name
         self.env = env_module.Env(ramping = difficulty_ramping)
